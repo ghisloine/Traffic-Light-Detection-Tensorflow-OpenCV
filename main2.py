@@ -66,8 +66,8 @@ def read_traffic_lights(image, boxes, scores, classes, max_boxes_to_draw=20, min
             (left, right, top, bottom) = (xmin * im_width, xmax * im_width,
                                           ymin * im_height, ymax * im_height)
             crop_img = image_pil.crop((left, top, right, bottom))
-            plt.imshow(crop_img)
-            plt.show()           
+            #plt.imshow(crop_img)
+            #plt.show()           
             if detect_red(crop_img):
                 red_flag = True
     return red_flag
@@ -88,7 +88,6 @@ def plot_origin_image(image_np, boxes, classes, scores, category_index):
       line_thickness=3)
     plt.figure(figsize=IMAGE_SIZE)
     plt.imshow(image_np)
-
     # save augmented images into hard drive
     # plt.savefig( 'output_images/ouput_' + str(idx) +'.png')
     plt.show()
@@ -104,7 +103,7 @@ Detect traffic lights and draw bounding boxes around the traffic lights
 
 
 commands = []
-MODEL_NAME = 'ssd_mobilenet_v2_coco_2018_03_29'
+MODEL_NAME = 'ssdlite_mobilenet_v2_coco_2018_05_09'
 
 # Path to frozen detection graph. This is the actual model that is used for the object detection.
 PATH_TO_CKPT = MODEL_NAME + '/frozen_inference_graph.pb'
@@ -135,10 +134,15 @@ categories = label_map_util.convert_label_map_to_categories(label_map,
 category_index = label_map_util.create_category_index(categories)
 print(category_index)
 
+frame_rate_calc = 1
+freq = cv2.getTickFrequency()
+font = cv2.FONT_HERSHEY_SIMPLEX
+
 with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
         
         while True:
+            t1 = cv2.getTickCount()
             #Read frame from camera
             ret, image_np = cap.read()
             # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
@@ -156,6 +160,9 @@ with detection_graph.as_default():
             detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
             num_detections = detection_graph.get_tensor_by_name('num_detections:0')
 
+            
+            
+            
             # Actual detection.
             (boxes, scores, classes, num) = sess.run(
                 [detection_boxes, detection_scores, detection_classes, num_detections],
@@ -177,8 +184,13 @@ with detection_graph.as_default():
                 category_index,
                 use_normalized_coordinates=True,
                 line_thickness=3)
+            cv2.putText(image_np,"FPS: {0:.2f}".format(frame_rate_calc),(30,50),font,1,(255,255,0),2,cv2.LINE_AA)
             
             cv2.imshow('object detection', cv2.resize(image_np, (800, 600)))
+            
+            t2 = cv2.getTickCount()
+            time1 = (t2-t1)/freq
+            frame_rate_calc = 1/time1
 
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 cap.release()
